@@ -4,9 +4,11 @@ import streamlit as st
 
 from core.database import ensure_db, fetch_df
 from core.presence import build_presence_sheet, dataframe_to_csv_bytes, dataframe_to_xlsx_bytes
+from core.theme import setup_theme
 
 
 ensure_db()
+setup_theme(show_toggle=True, toggle_location="sidebar")
 st.title("Planilha de Presenca")
 
 base_df = fetch_df(

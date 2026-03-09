@@ -55,10 +55,10 @@ def calculate_embedding(face_bgr: np.ndarray | None) -> np.ndarray | None:
     return None
 
 
-def load_named_references() -> list[dict[str, np.ndarray]]:
+def load_named_references() -> list[dict[str, object]]:
     df = fetch_df(
         """
-        SELECT nome, rosto_embeddings
+        SELECT ord_id, id_rosto, nome, rosto_embeddings
         FROM rostos
         WHERE nome IS NOT NULL
           AND TRIM(nome) <> ''
@@ -66,33 +66,46 @@ def load_named_references() -> list[dict[str, np.ndarray]]:
         """
     )
 
-    refs: list[dict[str, np.ndarray]] = []
+    refs: list[dict[str, object]] = []
     for _, row in df.iterrows():
         img = blob_to_image(row["rosto_embeddings"])
         emb = calculate_embedding(img)
         if emb is not None and emb.size == 128:
-            refs.append({"nome": str(row["nome"]), "embedding": emb})
+            refs.append(
+                {
+                    "ord_id": int(row["ord_id"]),
+                    "id_rosto": str(row["id_rosto"]),
+                    "nome": str(row["nome"]),
+                    "embedding": emb,
+                }
+            )
     return refs
 
 
-def recognize_name(embedding: np.ndarray | None, refs: list[dict[str, np.ndarray]]) -> tuple[str | None, float | None]:
+def recognize_name(
+    embedding: np.ndarray | None,
+    refs: list[dict[str, object]],
+) -> tuple[str | None, int | None, str | None, float | None]:
     if embedding is None or not refs:
-        return None, None
+        return None, None, None, None
 
-    best_by_name: dict[str, float] = {}
+    ranking: list[tuple[float, dict[str, object]]] = []
     for ref in refs:
         dist = float(np.linalg.norm(ref["embedding"] - embedding))
-        name = ref["nome"]
-        if name not in best_by_name or dist < best_by_name[name]:
-            best_by_name[name] = dist
+        ranking.append((dist, ref))
 
-    ranking = sorted((dist, name) for name, dist in best_by_name.items())
-    best_dist, best_name = ranking[0]
+    ranking.sort(key=lambda x: x[0])
+    best_dist, best_ref = ranking[0]
     second_dist = ranking[1][0] if len(ranking) > 1 else None
 
     if second_dist is not None and (second_dist - best_dist) < EMBEDDING_MARGIN:
-        return None, best_dist
+        return None, None, None, best_dist
 
     if best_dist <= EMBEDDING_TOLERANCE:
-        return best_name, best_dist
-    return None, best_dist
+        return (
+            str(best_ref["nome"]),
+            int(best_ref["ord_id"]),
+            str(best_ref["id_rosto"]),
+            best_dist,
+        )
+    return None, None, None, best_dist

@@ -14,9 +14,11 @@ from core.recognition import (
     load_named_references,
     recognize_name,
 )
+from core.theme import setup_theme
 
 
 ensure_db()
+setup_theme(show_toggle=True, toggle_location="sidebar")
 st.title("Cadastro e Reconhecimento")
 st.caption("Upload de imagem, deteccao de rostos e cadastro com reconhecimento automatico.")
 
@@ -48,7 +50,7 @@ if st.button("Detectar rostos", type="primary"):
             for idx, (x, y, w, h) in enumerate(faces):
                 crop = image_bgr[y : y + h, x : x + w]
                 emb = calculate_embedding(crop)
-                suggested_name, distance = recognize_name(emb, refs)
+                suggested_name, suggested_ord_id, suggested_face_id, distance = recognize_name(emb, refs)
 
                 detected_items.append(
                     {
@@ -57,6 +59,8 @@ if st.button("Detectar rostos", type="primary"):
                         "crop": crop,
                         "embedding_ok": emb is not None,
                         "suggested_name": suggested_name,
+                        "suggested_ord_id": suggested_ord_id,
+                        "suggested_face_id": suggested_face_id,
                         "distance": distance,
                     }
                 )
@@ -74,36 +78,63 @@ if image_bgr is not None and items:
     preview = image_bgr.copy()
     for item in items:
         x, y, w, h = item["bbox"]
-        cv2.rectangle(preview, (x, y), (x + w, y + h), (11, 95, 255), 2)
+        cv2.rectangle(preview, (x, y), (x + w, y + h), (255, 255, 0), 1)
 
     st.image(cv2.cvtColor(preview, cv2.COLOR_BGR2RGB), caption="Rostos detectados", use_container_width=True)
 
     st.subheader("Confirmacao antes de salvar")
     rows_to_insert: list[tuple[bytes, str, str | None, int, str, str, str | None]] = []
 
-    with st.form("save_faces"):
-        for item in items:
-            idx = item["idx"]
-            crop = item["crop"]
-            suggested = item["suggested_name"]
-            distance = item["distance"]
+    for item in items:
+        idx = int(item["idx"])
+        crop = item["crop"]
+        suggested = item["suggested_name"]
+        suggested_ord_id = item.get("suggested_ord_id")
+        suggested_face_id = item.get("suggested_face_id")
+        distance = item["distance"]
 
-            c1, c2 = st.columns([1, 2])
-            with c1:
-                st.image(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB), caption=f"Rosto {idx + 1}")
-            with c2:
-                default_name = suggested if suggested else ""
-                final_name = st.text_input(
+        key_suffix = f"{int(image_number)}_{idx}"
+        yes_key = f"yes_{key_suffix}"
+        manual_key = f"manual_name_{key_suffix}"
+        noname_key = f"noname_{key_suffix}"
+        direct_name_key = f"direct_name_{key_suffix}"
+
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            st.image(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB), caption=f"Rosto {idx + 1}")
+        with c2:
+            if suggested:
+                ord_id_text = str(suggested_ord_id) if suggested_ord_id is not None else "desconhecido"
+                id_rosto_text = str(suggested_face_id) if suggested_face_id is not None else "desconhecido"
+                st.write(
+                    f"Reconhecido como: {suggested} (ID {ord_id_text}) | id_rosto {id_rosto_text}"
+                )
+                if distance is not None:
+                    st.write(f"Distancia do reconhecimento: {distance:.3f}")
+
+                action_col, input_col = st.columns([1, 2])
+                with action_col:
+                    if st.button(f"Sim, e {suggested}", key=f"confirm_yes_{key_suffix}"):
+                        st.session_state[yes_key] = True
+                    if st.session_state.get(yes_key, False):
+                        st.success("Confirmado")
+                with input_col:
+                    st.text_input(
+                        "Se nao for a mesma pessoa, digite o nome correto",
+                        key=manual_key,
+                        placeholder="Nome correto",
+                    )
+            else:
+                st.text_input(
                     f"Nome do rosto {idx + 1}",
-                    value=default_name,
-                    key=f"name_{idx}",
-                ).strip()
-                st.checkbox("Salvar sem nome", key=f"noname_{idx}")
-                if suggested and distance is not None:
-                    st.write(f"Sugestao: {suggested} (distancia: {distance:.3f})")
-                st.write(f"Embedding valido: {'sim' if item['embedding_ok'] else 'nao'}")
+                    key=direct_name_key,
+                    placeholder="Digite o nome",
+                )
 
-        submit = st.form_submit_button("Salvar todos os rostos")
+            st.checkbox("Salvar sem nome", key=noname_key)
+            st.write(f"Embedding valido: {'sim' if item['embedding_ok'] else 'nao'}")
+
+    submit = st.button("Salvar todos os rostos", type="primary")
 
     if submit:
         try:
@@ -111,11 +142,35 @@ if image_bgr is not None and items:
         except ValueError:
             st.error("Data invalida. Use o formato AAAA-MM-DD HH:MM.")
         else:
+            invalid_confirmations: list[str] = []
             for item in items:
-                idx = item["idx"]
+                idx = int(item["idx"])
                 crop = item["crop"]
-                keep_without_name = st.session_state.get(f"noname_{idx}", False)
-                final_name = st.session_state.get(f"name_{idx}", "").strip()
+                suggested = item["suggested_name"]
+
+                key_suffix = f"{int(image_number)}_{idx}"
+                yes_key = f"yes_{key_suffix}"
+                manual_key = f"manual_name_{key_suffix}"
+                noname_key = f"noname_{key_suffix}"
+                direct_name_key = f"direct_name_{key_suffix}"
+
+                keep_without_name = st.session_state.get(noname_key, False)
+                manual_name = st.session_state.get(manual_key, "").strip()
+                direct_name = st.session_state.get(direct_name_key, "").strip()
+                confirmed_yes = bool(st.session_state.get(yes_key, False))
+
+                final_name = ""
+                if suggested:
+                    if manual_name:
+                        final_name = manual_name
+                    elif confirmed_yes:
+                        final_name = str(suggested)
+                    elif not keep_without_name:
+                        invalid_confirmations.append(
+                            f"Rosto {idx + 1}: clique em 'Sim' para confirmar '{suggested}' ou digite outro nome."
+                        )
+                else:
+                    final_name = direct_name
 
                 if keep_without_name:
                     final_name = ""
@@ -125,7 +180,6 @@ if image_bgr is not None and items:
                 data_str = datetime.strptime(data_imagem, "%Y-%m-%d %H:%M").strftime("%Y%m%d%H%M")
                 id_rosto = f"{ord_str}-{idx_str}-{data_str}"
 
-                suggested = item["suggested_name"]
                 origem_nome = None
                 if final_name:
                     origem_nome = "automatico" if suggested and final_name == suggested else "manual"
@@ -141,6 +195,11 @@ if image_bgr is not None and items:
                         origem_nome,
                     )
                 )
+
+            if invalid_confirmations:
+                for msg in invalid_confirmations:
+                    st.error(msg)
+                st.stop()
 
             execute_many(
                 """

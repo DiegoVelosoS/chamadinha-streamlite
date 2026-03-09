@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,11 @@ DB_PATH = DATA_DIR / "rostos.db"
 def get_connection() -> sqlite3.Connection:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     return sqlite3.connect(DB_PATH)
+
+
+def get_db_path() -> Path:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    return DB_PATH
 
 
 def ensure_db() -> None:
@@ -84,3 +90,39 @@ def execute_many(query: str, values: list[tuple[Any, ...]]) -> None:
 def next_image_number() -> int:
     df = fetch_df("SELECT COALESCE(MAX(numero_imagem), 0) AS max_num FROM rostos")
     return int(df.iloc[0]["max_num"]) + 1 if not df.empty else 1
+
+
+def export_db_bytes() -> bytes:
+    """Return the current SQLite file bytes for download/backup."""
+    ensure_db()
+    db_path = get_db_path()
+    return db_path.read_bytes()
+
+
+def import_db_bytes(db_bytes: bytes, create_restore_point: bool = True) -> str:
+    """Replace the current SQLite file from uploaded bytes and validate schema.
+
+    Returns the restore point path when it is created.
+    """
+    if not db_bytes:
+        raise ValueError("Arquivo de backup vazio.")
+
+    # SQLite files start with this fixed header.
+    if len(db_bytes) < 16 or db_bytes[:16] != b"SQLite format 3\x00":
+        raise ValueError("Backup invalido: arquivo nao parece ser um SQLite valido.")
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    db_path = get_db_path()
+
+    restore_path = ""
+    if create_restore_point and db_path.exists():
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        restore_file = DATA_DIR / f"rostos_backup_antes_restore_{stamp}.db"
+        restore_file.write_bytes(db_path.read_bytes())
+        restore_path = str(restore_file)
+
+    db_path.write_bytes(db_bytes)
+
+    # Validate that the uploaded file can be opened and has required schema.
+    ensure_db()
+    return restore_path

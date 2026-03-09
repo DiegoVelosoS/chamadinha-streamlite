@@ -79,8 +79,8 @@ def build_presence_sheet(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     cols = ["id_rosto", "nome", "turma"]
-    for _ in image_numbers:
-        cols.extend(["numero_imagem", "data_imagem"])
+    for img_num in image_numbers:
+        cols.extend([f"numero_imagem_{img_num}", f"data_imagem_{img_num}"])
     cols.append("total_presencas")
 
     out_rows = []

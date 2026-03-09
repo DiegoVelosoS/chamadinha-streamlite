@@ -6,10 +6,12 @@ import streamlit as st
 
 from core.database import ensure_db, execute, fetch_df
 from core.recognition import blob_to_image
+from core.theme import setup_theme
 
 
 ensure_db()
-st.title("Galeria e Edicao")
+setup_theme(show_toggle=True, toggle_location="sidebar")
+st.title("Galeria e Edição")
 
 query = """
 SELECT ord_id, id_rosto, nome, numero_imagem, turma, data_imagem, origem_nome, rosto_embeddings
@@ -57,11 +59,18 @@ ord_ids = filtrado["ord_id"].tolist()
 selected_ord = st.selectbox("Selecione o ord_id", ord_ids)
 selected = filtrado[filtrado["ord_id"] == selected_ord].iloc[0]
 
+# Mostra a imagem do rosto do registro selecionado para facilitar a edicao.
+selected_img = blob_to_image(selected["rosto_embeddings"])
+if selected_img is not None:
+    st.image(cv2.cvtColor(selected_img, cv2.COLOR_BGR2RGB), caption=f"Rosto do ord_id {selected_ord}", width=140)
+else:
+    st.info("Este registro nao possui imagem de rosto valida.")
+
 with st.form("edit_record"):
     new_name = st.text_input("Nome", value=selected["nome"] if pd.notna(selected["nome"]) else "")
     new_class = st.text_input("Turma", value=str(selected["turma"]))
-    new_img_num = st.number_input("Numero imagem", min_value=0, value=int(selected["numero_imagem"]), step=1)
-    new_date = st.text_input("Data imagem", value=str(selected["data_imagem"]))
+    new_img_num = st.number_input("Numero de Presença(s)", min_value=0, value=int(selected["numero_imagem"]), step=1)
+    new_date = st.text_input("Data 1ª Presença", value=str(selected["data_imagem"]))
     submit_edit = st.form_submit_button("Salvar alteracoes")
 
 if submit_edit:

@@ -1,15 +1,11 @@
 # Chamadinha - Versao Streamlit
-
-Versao web do sistema de reconhecimento facial original, criada em pasta separada para deploy.
+Versao web do sistema de reconhecimento facial.
 
 ## Objetivo
-
-- Nao altera nenhum arquivo do projeto principal.
-- Reaproveita a logica central (detectar rosto, reconhecer por embedding, editar dados, gerar planilha de presenca).
-- Prepara um fluxo pronto para executar em Streamlit.
+- Testar a logica central (detectar rosto, reconhecer por embedding, editar dados, gerar planilha de presenca).
+- Preparar um relatório de presenças através de imagens recebidas.
 
 ## Estrutura
-
 - `app.py`: pagina inicial e setup.
 - `pages/1_Cadastro_e_Reconhecimento.py`: upload, deteccao, sugestao de nome e salvamento.
 - `pages/2_Galeria_e_Edicao.py`: tabela, mini galeria e edicao de registros.
@@ -18,25 +14,45 @@ Versao web do sistema de reconhecimento facial original, criada em pasta separad
 - `core/`: banco, deteccao, reconhecimento e consolidacao.
 - `data/rostos.db`: banco SQLite usado por esta versao.
 
-## Executar localmente
-
-No terminal, a partir de `streamlit_deploy`:
+## Executar em localhost (Windows)
+Use os comandos abaixo dentro da pasta `streamlit_deploy`:
 
 ```powershell
-pip install -r requirements.txt
-streamlit run app.py
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-## Deploy no Streamlit
+Se o PowerShell bloquear a ativacao do ambiente virtual, rode:
 
-1. Suba a pasta `streamlit_deploy` para o repositorio.
-2. No Streamlit Community Cloud, configure:
-   - Main file path: `streamlit_deploy/app.py`
-   - Python dependencies: `streamlit_deploy/requirements.txt`
-3. Para persistencia real de dados em cloud, troque SQLite local por banco externo (PostgreSQL, por exemplo).
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Depois execute novamente:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m streamlit run app.py
+```
+
+Ao iniciar, abra no navegador:
+
+- `http://localhost:8501`
+
+## Edicao local (modo desenvolvimento)
+- Deixe o Streamlit rodando no terminal.
+- Edite arquivos como `app.py`, `pages/*.py` e `core/*.py` no VS Code.
+- Salve os arquivos para o Streamlit recarregar automaticamente.
+- Se alguma alteracao nao aparecer, use `R` no terminal do Streamlit ou recarregue a pagina no navegador.
 
 ## Observacoes
-
 - O reconhecimento automatico depende de `face-recognition`.
-- Se `face-recognition` nao estiver disponivel no ambiente, o cadastro continua funcionando, mas sem sugestao automatica de nome.
+- Se `face-recognition` nao estiver disponivel no ambiente, o cadastro continua funcionando, mas nao funcionara o reconhecimento dos rostos salvos.
 - Os modelos YuNet/DNN sao baixados automaticamente quando necessario.
+- Na pagina inicial (`app.py`), existe a secao **Backup e restauracao do banco (SQLite)**.
+	- Clique em **Baixar backup do banco (.db)** ao encerrar a sessao.
+	- Na proxima sessao, envie o arquivo em **Restaurar de backup (.db)** e clique em **Aplicar backup enviado**.
+	- Esse fluxo e manual e pode ser usado junto com Google Drive (salvando/recuperando o `.db` no Drive).
