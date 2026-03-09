@@ -1,0 +1,156 @@
+from __future__ import annotations
+
+from datetime import datetime
+
+import cv2
+import numpy as np
+import streamlit as st
+
+from core.database import ensure_db, execute_many, next_image_number
+from core.detection import detect_faces
+from core.recognition import (
+    calculate_embedding,
+    image_to_jpeg_bytes,
+    load_named_references,
+    recognize_name,
+)
+
+
+ensure_db()
+st.title("Cadastro e Reconhecimento")
+st.caption("Upload de imagem, deteccao de rostos e cadastro com reconhecimento automatico.")
+
+if "detected_items" not in st.session_state:
+    st.session_state.detected_items = []
+if "current_image" not in st.session_state:
+    st.session_state.current_image = None
+if "current_image_number" not in st.session_state:
+    st.session_state.current_image_number = None
+
+uploaded = st.file_uploader("Imagem", type=["jpg", "jpeg", "png", "bmp", "webp"])
+turma = st.text_input("Turma", value="Turma A")
+data_imagem = st.text_input("Data e hora (AAAA-MM-DD HH:MM)", value=datetime.now().strftime("%Y-%m-%d %H:%M"))
+
+if st.button("Detectar rostos", type="primary"):
+    if uploaded is None:
+        st.error("Envie uma imagem antes de detectar.")
+    else:
+        file_bytes = np.asarray(bytearray(uploaded.read()), dtype=np.uint8)
+        image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+        if image_bgr is None:
+            st.error("Nao foi possivel decodificar a imagem enviada.")
+        else:
+            refs = load_named_references()
+            faces = detect_faces(image_bgr)
+
+            detected_items: list[dict[str, object]] = []
+            for idx, (x, y, w, h) in enumerate(faces):
+                crop = image_bgr[y : y + h, x : x + w]
+                emb = calculate_embedding(crop)
+                suggested_name, distance = recognize_name(emb, refs)
+
+                detected_items.append(
+                    {
+                        "idx": idx,
+                        "bbox": (int(x), int(y), int(w), int(h)),
+                        "crop": crop,
+                        "embedding_ok": emb is not None,
+                        "suggested_name": suggested_name,
+                        "distance": distance,
+                    }
+                )
+
+            st.session_state.current_image = image_bgr
+            st.session_state.current_image_number = next_image_number()
+            st.session_state.detected_items = detected_items
+            st.success(f"{len(detected_items)} rosto(s) detectado(s).")
+
+items = st.session_state.detected_items
+image_bgr = st.session_state.current_image
+image_number = st.session_state.current_image_number
+
+if image_bgr is not None and items:
+    preview = image_bgr.copy()
+    for item in items:
+        x, y, w, h = item["bbox"]
+        cv2.rectangle(preview, (x, y), (x + w, y + h), (11, 95, 255), 2)
+
+    st.image(cv2.cvtColor(preview, cv2.COLOR_BGR2RGB), caption="Rostos detectados", use_container_width=True)
+
+    st.subheader("Confirmacao antes de salvar")
+    rows_to_insert: list[tuple[bytes, str, str | None, int, str, str, str | None]] = []
+
+    with st.form("save_faces"):
+        for item in items:
+            idx = item["idx"]
+            crop = item["crop"]
+            suggested = item["suggested_name"]
+            distance = item["distance"]
+
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                st.image(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB), caption=f"Rosto {idx + 1}")
+            with c2:
+                default_name = suggested if suggested else ""
+                final_name = st.text_input(
+                    f"Nome do rosto {idx + 1}",
+                    value=default_name,
+                    key=f"name_{idx}",
+                ).strip()
+                st.checkbox("Salvar sem nome", key=f"noname_{idx}")
+                if suggested and distance is not None:
+                    st.write(f"Sugestao: {suggested} (distancia: {distance:.3f})")
+                st.write(f"Embedding valido: {'sim' if item['embedding_ok'] else 'nao'}")
+
+        submit = st.form_submit_button("Salvar todos os rostos")
+
+    if submit:
+        try:
+            datetime.strptime(data_imagem, "%Y-%m-%d %H:%M")
+        except ValueError:
+            st.error("Data invalida. Use o formato AAAA-MM-DD HH:MM.")
+        else:
+            for item in items:
+                idx = item["idx"]
+                crop = item["crop"]
+                keep_without_name = st.session_state.get(f"noname_{idx}", False)
+                final_name = st.session_state.get(f"name_{idx}", "").strip()
+
+                if keep_without_name:
+                    final_name = ""
+
+                ord_str = f"{int(image_number):03d}"
+                idx_str = f"{idx:03d}"
+                data_str = datetime.strptime(data_imagem, "%Y-%m-%d %H:%M").strftime("%Y%m%d%H%M")
+                id_rosto = f"{ord_str}-{idx_str}-{data_str}"
+
+                suggested = item["suggested_name"]
+                origem_nome = None
+                if final_name:
+                    origem_nome = "automatico" if suggested and final_name == suggested else "manual"
+
+                rows_to_insert.append(
+                    (
+                        image_to_jpeg_bytes(crop),
+                        id_rosto,
+                        final_name if final_name else None,
+                        int(image_number),
+                        turma.strip() if turma.strip() else "Turma sem nome",
+                        data_imagem,
+                        origem_nome,
+                    )
+                )
+
+            execute_many(
+                """
+                INSERT INTO rostos (rosto_embeddings, id_rosto, nome, numero_imagem, turma, data_imagem, origem_nome)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                rows_to_insert,
+            )
+            st.success(f"{len(rows_to_insert)} registro(s) salvo(s) no banco.")
+            st.session_state.detected_items = []
+
+elif image_bgr is not None and not items:
+    st.warning("Nenhum rosto detectado para a imagem atual.")
