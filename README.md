@@ -1,9 +1,22 @@
 # Chamadinha - Versao Streamlit
-Versao web do sistema de reconhecimento facial.
+Versao web de um sistema de reconhecimento facial aplicado ao controle de presenca e a automacao de processos presenciais.
 
 ## Objetivo
 - Testar a logica central (detectar rosto, reconhecer por embedding, editar dados, gerar planilha de presenca).
-- Preparar um relatório de presenças através de imagens recebidas.
+- Preparar um relatorio de presencas atraves de imagens recebidas.
+- Aplicar ferramentas da Industria 4.0, que usa visao computacional e digitalizacao de processos para otimização de recursos operacionais humanos na elaboração de chamadas e validações de presencas.
+- Apoiar a celeridade operacional de encontros presenciais, como aulas, treinamentos, reuniões, integrações, palestras e outros eventos corporativos, educacionais ou sociais de forma discreta e rápida.
+
+## Aplicacao na Industria 4.0
+Esta aplicação utilisa de princípios da Industria 4.0 ao combinar reconhecimento facial, processamento automatizado de imagens e consolidacao digital de dados para maior eficiencia da gestao de presença de pessoas.
+
+Na pratica, a ferramenta reduz atividades manuais, acelera a confirmação de participantes e melhora a rastreabilidade das informações, sendo util em contextos como:
+
+- aulas e turmas de capacitação;
+- treinamentos internos e externos;
+- reuniões operacionais e administrativas;
+- eventos de onboarding, palestras e workshops; e
+- qualquer situação em que seja importante registrar presença com rapidez através de uma foto como padronização do contexto da reunião humana.
 
 ## Estrutura
 - `app.py`: pagina inicial e setup.
