@@ -5,7 +5,7 @@ import numpy as np
 
 from core.database import fetch_df
 
-EMBEDDING_TOLERANCE = 0.55
+EMBEDDING_TOLERANCE = 0.35
 EMBEDDING_MARGIN = 0.03
 
 try:
