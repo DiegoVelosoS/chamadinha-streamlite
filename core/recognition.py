@@ -5,8 +5,8 @@ import numpy as np
 
 from core.database import fetch_df
 
-EMBEDDING_TOLERANCE = 0.35
-EMBEDDING_MARGIN = 0.03
+EMBEDDING_TOLERANCE = 0.60
+EMBEDDING_MARGIN = 0.10
 
 try:
     import face_recognition
