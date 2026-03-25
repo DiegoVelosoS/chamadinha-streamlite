@@ -1,23 +1,32 @@
-# Python cache/bytecode
-__pycache__/
-*.py[cod]
-*$py.class
+###############################
+# IGNORAR TUDO POR PADRÃO
+###############################
+/*
 
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
+###############################
+# EXCEÇÕES: APENAS O QUE DEVE SER VERSIONADO
+###############################
+!app.py
+!requirements.txt
+!runtime.txt
+!README.md
+!face_detection_yunet_2023mar.onnx
+!core/
+!core/**
+!pages/
+!pages/**
+!Dataset/
+!Dataset/**
 
-# Build and tooling
-build/
-dist/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
+###############################
+# IGNORAR ITENS ESPECÍFICOS DENTRO DAS EXCEÇÕES
+###############################
+core/__pycache__/
+core/*.py[cod]
+pages/__pycache__/
+pages/*.py[cod]
+Dataset/**/__pycache__/
+Dataset/**/*.py[cod]
 
 # IDE/editor
 .vscode/
