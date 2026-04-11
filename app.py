@@ -7,7 +7,7 @@ from core.theme import get_theme_tokens, setup_theme
 
 
 st.set_page_config(
-    page_title="Chamadinha - Diego",
+    page_title="TCC-Diego",
     page_icon=":brain:",
     layout="wide",
 )
