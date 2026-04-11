@@ -43,7 +43,18 @@ st.dataframe(
 )
 
 st.subheader("Mini galeria")
-show_n = st.slider("Quantidade de imagens", min_value=1, max_value=min(30, len(filtrado)), value=min(8, len(filtrado)))
+
+# Verificação para evitar erro quando filtrado está vazio
+if len(filtrado) == 0:
+    st.info("Nenhum registro encontrado com os filtros aplicados.")
+    st.stop()
+
+show_n = st.slider(
+    "Quantidade de imagens",
+    min_value=1,
+    max_value=min(30, len(filtrado)),
+    value=min(8, len(filtrado))
+)
 cols = st.columns(4)
 
 for i, (_, row) in enumerate(filtrado.head(show_n).iterrows()):
