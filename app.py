@@ -17,7 +17,7 @@ theme_tokens = get_theme_tokens(current_theme)
 
 ensure_db()
 
-st.title("VISÃO COMPUTACIONAL PARA PROCESSAMENTO ASSÍNCRONO DE IMAGENS E EMBEDDINGS FACIAIS NO CONTROLE DE FREQUÊNCIAS: UMA ABORDAGEM DE APLICAÇÃO PRÁTICA DA INDÚSTRIA 4.0")
+st.title("VISÃO COMPUTACIONAL PARA PROCESSAMENTO SÍNCRONO DE IMAGENS E EMBEDDINGS FACIAIS NO CONTROLE DE FREQUÊNCIAS: UMA ABORDAGEM DE APLICAÇÃO PRÁTICA DA INDÚSTRIA 4.0")
 st.markdown(
     f"""
 <p style="margin:0; line-height:1.35; color:{theme_tokens['text_muted']}; font-size:0.95rem;">
