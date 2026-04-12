@@ -2,7 +2,7 @@ from datetime import datetime
 
 import streamlit as st
 
-from core.database import ensure_db, export_db_bytes, import_db_bytes
+from core.database import ensure_db, export_db_bytes, import_db_bytes, reset_db
 from core.theme import get_theme_tokens, setup_theme
 
 
@@ -55,6 +55,7 @@ with st.expander("Backup e restauracao do banco (SQLite)", expanded=False):
         "Ele funciona como backup/restore manual."
     )
 
+
     backup_bytes = export_db_bytes()
     st.download_button(
         label="Baixar backup do banco (.db)",
@@ -63,6 +64,19 @@ with st.expander("Backup e restauracao do banco (SQLite)", expanded=False):
         mime="application/octet-stream",
         use_container_width=True,
     )
+
+    st.markdown("---")
+    st.subheader(":warning: Resetar sistema (apagar todos os dados)")
+    st.caption("Esta ação irá apagar **todos os registros** do banco de dados, sem possibilidade de recuperação. Faça backup antes!")
+    if st.button("Resetar banco de dados", type="secondary", use_container_width=True):
+        if st.confirm("Tem certeza que deseja apagar **todos os dados** do sistema? Esta ação é irreversível."):
+            try:
+                reset_db()
+            except Exception as exc:
+                st.error(f"Erro ao resetar banco: {exc}")
+            else:
+                st.success("Todos os dados foram apagados com sucesso.")
+                st.info("Recarregue a página para refletir o banco limpo.")
 
     uploaded_backup = st.file_uploader(
         "Restaurar de backup (.db)",

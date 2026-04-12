@@ -1,3 +1,8 @@
+def reset_db() -> None:
+    """Remove completamente o arquivo do banco de dados, simulando o primeiro acesso."""
+    db_path = get_db_path()
+    if db_path.exists():
+        db_path.unlink()  # Remove o arquivo do banco
 from __future__ import annotations
 
 import sqlite3
