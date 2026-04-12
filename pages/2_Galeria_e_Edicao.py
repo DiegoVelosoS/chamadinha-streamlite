@@ -1,3 +1,4 @@
+# Modificação: ajuste do slider para evitar erro quando há apenas 1 registro (12/04/2026)
 from __future__ import annotations
 
 import cv2
