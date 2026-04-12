@@ -71,6 +71,7 @@ with st.expander("Backup e restauracao do banco (SQLite)", expanded=False):
         type=["db", "sqlite", "sqlite3"],
         accept_multiple_files=False,
         help="Envie um arquivo de backup SQLite previamente baixado pelo sistema.",
+        key="file_uploader_backup"
     )
 
     if uploaded_backup is not None:
@@ -91,19 +92,30 @@ with st.expander("Backup e restauracao do banco (SQLite)", expanded=False):
 
     # Botão de reset: sempre no final, curto, vermelho, mesmo tamanho do upload
     st.markdown("---")
-    col1, col2 = st.columns([1, 1])
-    with col2:
-        st.caption(":red[Esta ação apaga todos os dados do sistema. Irreversível! Faça backup antes.]")
-        if st.button("Apagar tudo", type="primary", use_container_width=True, key="reset_db_btn", help="Remove todos os dados do sistema permanentemente.",
-                    args=None, kwargs=None, disabled=False):
-            if st.confirm("Tem certeza? Esta ação é irreversível."):
-                try:
-                    reset_db()
-                except Exception as exc:
-                    st.error(f"Erro ao resetar banco: {exc}")
-                else:
-                    st.success("Todos os dados foram apagados.")
-                    st.info("Recarregue a página para começar do zero.")
+    st.caption(":red[Esta ação apaga todos os dados do sistema. Irreversível! Faça backup antes.]")
+    reset_btn = st.button("Apagar tudo", key="reset_db_btn", use_container_width=True)
+    st.markdown("""
+        <style>
+        div[data-testid="stButton"] button[data-testid="baseButton-reset_db_btn"] {
+            background-color: #d32f2f !important;
+            color: white !important;
+            border: 1px solid #b71c1c !important;
+        }
+        div[data-testid="stButton"] button[data-testid="baseButton-reset_db_btn"]:hover {
+            background-color: #b71c1c !important;
+            color: white !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    if reset_btn:
+        if st.confirm("Tem certeza? Esta ação é irreversível."):
+            try:
+                reset_db()
+            except Exception as exc:
+                st.error(f"Erro ao resetar banco: {exc}")
+            else:
+                st.success("Todos os dados foram apagados.")
+                st.info("Recarregue a página para começar do zero.")
 
     uploaded_backup = st.file_uploader(
         "Restaurar de backup (.db)",
