@@ -90,25 +90,36 @@ with st.expander("Backup e restauracao do banco (SQLite)", expanded=False):
                     st.success("Backup restaurado com sucesso.")
                 st.info("Recarregue a pagina para refletir os dados restaurados em todas as telas.")
 
-    # Botão de reset: sempre no final, curto, vermelho, mesmo tamanho do upload
+    # Botão de reset
     st.markdown("---")
     st.caption(":red[Esta ação apaga todos os dados do sistema. Irreversível! Faça backup antes.]")
-    reset_btn = st.button("Apagar tudo", key="reset_db_btn", use_container_width=True)
-    st.markdown("""
-        <style>
-        div[data-testid="stButton"] button[data-testid="baseButton-reset_db_btn"] {
-            background-color: #d32f2f !important;
-            color: white !important;
-            border: 1px solid #b71c1c !important;
-        }
-        div[data-testid="stButton"] button[data-testid="baseButton-reset_db_btn"]:hover {
-            background-color: #b71c1c !important;
-            color: white !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    if reset_btn:
-        if st.confirm("Tem certeza? Esta ação é irreversível."):
+
+    if 'reset_confirm' not in st.session_state:
+        st.session_state.reset_confirm = False
+    if 'reset_done' not in st.session_state:
+        st.session_state.reset_done = False
+
+    if not st.session_state.reset_confirm and not st.session_state.reset_done:
+        reset_btn = st.button("Apagar tudo", key="reset_db_btn", use_container_width=True, help="Botão de reset do sistema.")
+        st.markdown("""
+            <style>
+            button[aria-label="Apagar tudo"] {
+                background-color: #d32f2f !important;
+                color: white !important;
+                border: 1px solid #b71c1c !important;
+            }
+            button[aria-label="Apagar tudo"]:hover {
+                background-color: #b71c1c !important;
+                color: white !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        if reset_btn:
+            st.session_state.reset_confirm = True
+
+    if st.session_state.reset_confirm and not st.session_state.reset_done:
+        st.warning("Tem certeza? Esta ação é irreversível.")
+        if st.button("Sim, apagar tudo", key="confirm_reset", type="primary"):
             try:
                 reset_db()
             except Exception as exc:
@@ -116,28 +127,8 @@ with st.expander("Backup e restauracao do banco (SQLite)", expanded=False):
             else:
                 st.success("Todos os dados foram apagados.")
                 st.info("Recarregue a página para começar do zero.")
+                st.session_state.reset_done = True
+                st.session_state.reset_confirm = False
 
-    uploaded_backup = st.file_uploader(
-        "Restaurar de backup (.db)",
-        type=["db", "sqlite", "sqlite3"],
-        accept_multiple_files=False,
-        help="Envie um arquivo de backup SQLite previamente baixado pelo sistema.",
-    )
-
-    if uploaded_backup is not None:
-        if st.button("Aplicar backup enviado", type="primary", use_container_width=True):
-            try:
-                restore_point = import_db_bytes(uploaded_backup.getvalue(), create_restore_point=True)
-            except Exception as exc:
-                st.error(f"Falha ao restaurar backup: {exc}")
-            else:
-                if restore_point:
-                    st.success(
-                        "Backup restaurado com sucesso. "
-                        f"Foi criado um ponto de restauracao local em: `{restore_point}`"
-                    )
-                else:
-                    st.success("Backup restaurado com sucesso.")
-                st.info("Recarregue a pagina para refletir os dados restaurados em todas as telas.")
 
 st.write(f"Horario local: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
