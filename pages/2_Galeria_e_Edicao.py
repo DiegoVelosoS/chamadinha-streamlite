@@ -60,13 +60,8 @@ cols = st.columns(4)
 for i, (_, row) in enumerate(filtrado.head(show_n).iterrows()):
     img = blob_to_image(row["rosto_embeddings"])
     with cols[i % 4]:
-        if img is not None and isinstance(img, np.ndarray) and img.ndim == 3:
-            try:
-                st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), caption=f"ord_id {row['ord_id']}")
-            except Exception as e:
-                st.warning(f"Não foi possível exibir a imagem do ord_id {row['ord_id']}: {e}")
-        else:
-            st.info(f"Imagem não disponível ou formato inválido para ord_id {row['ord_id']}.")
+        if img is not None:
+            st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), caption=f"ord_id {row['ord_id']}")
         st.write(f"nome: {row['nome'] if pd.notna(row['nome']) else '(sem nome)'}")
         st.write(f"turma: {row['turma']}")
 
