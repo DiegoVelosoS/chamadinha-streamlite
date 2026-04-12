@@ -25,22 +25,29 @@ if df.empty:
     st.stop()
 
 f1, f2 = st.columns(2)
+
 with f1:
-    filtro_nome = st.text_input("Filtrar por nome")
+    busca_nome = st.text_input("Buscar por nome (digite e pressione Enter)")
 with f2:
     filtro_turma = st.text_input("Filtrar por turma")
 
 filtrado = df.copy()
-if filtro_nome.strip():
-    filtrado = filtrado[filtrado["nome"].fillna("").str.contains(filtro_nome, case=False)]
+if busca_nome.strip():
+    filtrado = filtrado[filtrado["nome"].fillna("").str.contains(busca_nome, case=False)]
 if filtro_turma.strip():
     filtrado = filtrado[filtrado["turma"].fillna("").str.contains(filtro_turma, case=False)]
+
+# Se busca_nome retornou apenas um registro, já seleciona esse registro automaticamente
+auto_selected_ord = None
+if busca_nome.strip() and len(filtrado) == 1:
+    auto_selected_ord = filtrado.iloc[0]["ord_id"]
 
 st.subheader("Tabela de registros")
 st.dataframe(
     filtrado[["ord_id", "id_rosto", "nome", "numero_imagem", "turma", "data_imagem", "origem_nome"]],
     use_container_width=True,
 )
+
 
 st.subheader("Mini galeria")
 
@@ -49,12 +56,19 @@ if len(filtrado) == 0:
     st.info("Nenhum registro encontrado com os filtros aplicados.")
     st.stop()
 
-show_n = st.slider(
-    "Quantidade de imagens",
-    min_value=1,
-    max_value=min(30, len(filtrado)),
-    value=min(8, len(filtrado))
-)
+# Corrige erro do slider quando só há 1 registro
+if len(filtrado) == 1:
+    show_n = 1  # Não exibe slider, mostra só 1 imagem
+else:
+    # Garante que min_value < max_value
+    min_slider = 1
+    max_slider = max(2, min(30, len(filtrado))) if len(filtrado) > 1 else 2
+    show_n = st.slider(
+        "Quantidade de imagens",
+        min_value=min_slider,
+        max_value=max_slider,
+        value=min(8, len(filtrado))
+    )
 cols = st.columns(4)
 
 for i, (_, row) in enumerate(filtrado.head(show_n).iterrows()):
@@ -66,8 +80,12 @@ for i, (_, row) in enumerate(filtrado.head(show_n).iterrows()):
         st.write(f"turma: {row['turma']}")
 
 st.subheader("Editar registro")
+
 ord_ids = filtrado["ord_id"].tolist()
-selected_ord = st.selectbox("Selecione o ord_id", ord_ids)
+if auto_selected_ord is not None:
+    selected_ord = auto_selected_ord
+else:
+    selected_ord = st.selectbox("Selecione o ord_id", ord_ids)
 selected = filtrado[filtrado["ord_id"] == selected_ord].iloc[0]
 
 # Mostra a imagem do rosto do registro selecionado para facilitar a edicao.
