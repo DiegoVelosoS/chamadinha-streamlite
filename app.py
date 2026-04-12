@@ -65,18 +65,45 @@ with st.expander("Backup e restauracao do banco (SQLite)", expanded=False):
         use_container_width=True,
     )
 
-    st.markdown("---")
-    st.subheader(":warning: Resetar sistema (apagar todos os dados)")
-    st.caption("Esta ação irá apagar **todos os registros** do banco de dados, sem possibilidade de recuperação. Faça backup antes!")
-    if st.button("Resetar banco de dados", type="secondary", use_container_width=True):
-        if st.confirm("Tem certeza que deseja apagar **todos os dados** do sistema? Esta ação é irreversível."):
+
+    uploaded_backup = st.file_uploader(
+        "Restaurar de backup (.db)",
+        type=["db", "sqlite", "sqlite3"],
+        accept_multiple_files=False,
+        help="Envie um arquivo de backup SQLite previamente baixado pelo sistema.",
+    )
+
+    if uploaded_backup is not None:
+        if st.button("Aplicar backup enviado", type="primary", use_container_width=True):
             try:
-                reset_db()
+                restore_point = import_db_bytes(uploaded_backup.getvalue(), create_restore_point=True)
             except Exception as exc:
-                st.error(f"Erro ao resetar banco: {exc}")
+                st.error(f"Falha ao restaurar backup: {exc}")
             else:
-                st.success("Todos os dados foram apagados com sucesso.")
-                st.info("Recarregue a página para refletir o banco limpo.")
+                if restore_point:
+                    st.success(
+                        "Backup restaurado com sucesso. "
+                        f"Foi criado um ponto de restauracao local em: `{restore_point}`"
+                    )
+                else:
+                    st.success("Backup restaurado com sucesso.")
+                st.info("Recarregue a pagina para refletir os dados restaurados em todas as telas.")
+
+    # Botão de reset: sempre no final, curto, vermelho, mesmo tamanho do upload
+    st.markdown("---")
+    col1, col2 = st.columns([1, 1])
+    with col2:
+        st.caption(":red[Esta ação apaga todos os dados do sistema. Irreversível! Faça backup antes.]")
+        if st.button("Apagar tudo", type="primary", use_container_width=True, key="reset_db_btn", help="Remove todos os dados do sistema permanentemente.",
+                    args=None, kwargs=None, disabled=False):
+            if st.confirm("Tem certeza? Esta ação é irreversível."):
+                try:
+                    reset_db()
+                except Exception as exc:
+                    st.error(f"Erro ao resetar banco: {exc}")
+                else:
+                    st.success("Todos os dados foram apagados.")
+                    st.info("Recarregue a página para começar do zero.")
 
     uploaded_backup = st.file_uploader(
         "Restaurar de backup (.db)",
